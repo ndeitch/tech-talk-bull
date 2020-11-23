@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bull'
 import { Controller, Get, Logger, Param, Query } from '@nestjs/common'
 import { Job, Queue } from 'bull'
 
@@ -5,8 +6,8 @@ import { Job, Queue } from 'bull'
 export class JobController {
   private readonly queues: { [key: string]: Queue }
 
-  constructor() {
-    this.queues = {}
+  constructor(@InjectQueue('retry') queue: Queue) {
+    this.queues = { retry: queue }
   }
 
   @Get(':queue')
@@ -15,5 +16,13 @@ export class JobController {
     return jobName
       ? this.queues[queue].add(jobName, { job: true })
       : this.queues[queue].add({ job: true })
+  }
+
+  @Get('reprocess/:queue/:jobId')
+  async reprocess(@Param('queue') queue: string, @Param('jobId') jobId: string): Promise<unknown> {
+    Logger.log(`Reprocess jobId=${jobId} for queue=${queue}`, JobController.name)
+    const job = await this.queues[queue].getJob(jobId)
+
+    return job.retry()
   }
 }
