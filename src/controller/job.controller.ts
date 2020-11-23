@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bull'
 import { Controller, Get, Logger, Param, Query } from '@nestjs/common'
 import { Job, Queue } from 'bull'
 
@@ -5,8 +6,8 @@ import { Job, Queue } from 'bull'
 export class JobController {
   private readonly queues: { [key: string]: Queue }
 
-  constructor() {
-    this.queues = {}
+  constructor(@InjectQueue('delay') queue: Queue) {
+    this.queues = { delay: queue }
   }
 
   @Get(':queue')
@@ -15,5 +16,12 @@ export class JobController {
     return jobName
       ? this.queues[queue].add(jobName, { job: true })
       : this.queues[queue].add({ job: true })
+  }
+
+  @Get('cancel/:queue/:jobId')
+  async cancel(@Param('queue') queue: string, @Param('jobId') jobId: string): Promise<void> {
+    Logger.log(`Cancelling jobId=${jobId} from queue=${queue}`, JobController.name)
+    const job = await this.queues[queue].getJob(jobId)
+    await job.remove()
   }
 }
