@@ -1,3 +1,4 @@
+import { InjectQueue } from '@nestjs/bull'
 import { Controller, Get, Logger, Param, Query } from '@nestjs/common'
 import { Job, Queue } from 'bull'
 
@@ -5,8 +6,8 @@ import { Job, Queue } from 'bull'
 export class JobController {
   private readonly queues: { [key: string]: Queue }
 
-  constructor() {
-    this.queues = {}
+  constructor(@InjectQueue('rate-limit') queue: Queue) {
+    this.queues = { 'rate-limit': queue }
   }
 
   @Get(':queue')
